@@ -1,16 +1,58 @@
-function drawexcept(img,x,y,color){
-	let currentdata=ctx.getImageData(0,0,img.width,img.height)
-	ctx.drawImage(img,0,0)
-	let imgdata=ctx.getImageData(0,0,img.width,img.height)
-	console.log(imgdata.data)
-	for(let i=3;i<imgdata.data.length;i+=4){
-		if(color==='rgb('+imgdata.data[i-3]+','+imgdata.data[i-2]+','+imgdata.data[i-1]+')'){
-			imgdata.data[i]=0
+class imgobj{
+	constructor(px,py){
+		this.position={x:px,y:py}
+		this.rotation=0
+		this.scale={x:1,y:1}
+		this.through=1
+		this.visible=true
+		this.style=0
+		this.styles=[]
+		this.group=[]
+	}
+	draw(){
+		if(this.visible){
+			ctx.save()
+			ctx.translate(this.position.x,this.position.y)
+			ctx.rotate(this.rotation)
+			ctx.scale(this.scale.x,this.scale.y)
+			ctx.globalAlpha=this.through
+			ctx.drawImage(this.styles[this.style].img,-this.styles[this.style].middle.x,-this.styles[this.style].middle.y)
+			ctx.globalAlpha=1.0
+			ctx.restore()
+			
 		}
 	}
-	ctx.putImageData(currentdata,0,0)
-	ctx.putImageData(imgdata,x,y)
+	ispointinpath(x,y){
+		ctx.save()
+		ctx.translate(this.position.x,this.position.y)
+		ctx.rotate(this.rotation)
+		ctx.scale(this.scale.x,this.scale.y)
+		ctx.beginPath()
+		for(let i=0;i<this.styles[this.style].path.length;i++){
+			if(i===0){
+				ctx.moveTo(this.styles[this.style].path[i].x,this.styles[this.style].path[i].y)
+			}else{
+				ctx.lineTo(this.styles[this.style].path[i].x,this.styles[this.style].path[i].y)
+			}
+		}
+		ctx.closePath()
+		ctx.restore()
+		return ctx.isPointInPath(x,y)
+		
+	}
+	addstyle(src,middle,path){
+		let img=new Image()
+		img.src=src 
+		this.styles.push({method:'img',img:img,middle:middle,path:path})
+	}
 }
+
+
+
+
+
+
+
 //格線
 function grid(color='black',width=0.2,interval=10){
 	let ww=window.innerWidth
@@ -30,6 +72,99 @@ function grid(color='black',width=0.2,interval=10){
 		ctx.stroke()
 	}
 }
+
+
+
+
+//背景
+function background(color){
+	ctx.save()
+	ctx.fillStyle=color
+	ctx.fillRect(0,0,ww,wh)
+	ctx.restore()
+}
+
+//群組
+class Group{
+	constructor(aa){
+		let all_members=[]
+		let element={
+			position:{x:0,y:0},
+			scale:{x:1,y:1},
+			deg:0,
+			visible:true,
+			members_count:0,
+			members:all_members
+			
+		}
+		Object.assign(element,aa)
+		Object.assign(this,element)
+	}
+	add(object_){
+		this.members.push(object_)
+		object_.group.push(this)
+		this.members_count+=1
+	}
+	draw(){
+		if(this.visible===false){
+			return
+		}
+		for(let i=0;i<this.members_count;i++){
+			ctx.save()
+			ctx.translate(this.position.x,this.position.y)
+			ctx.rotate(this.deg)
+			ctx.scale(this.scale.x,this.scale.y)
+			this.members[i].draw()
+			ctx.restore()
+			
+	
+		}
+	}
+	ispointinpath(x,y){
+		if(this.visible===false){
+			return false
+		}
+		for(let i=0;i<this.members_count;i++){
+			
+			if(this.members[i].ispointinpath(x,y)){
+				return true
+			}
+			
+		}
+		return false
+
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //drawer
 function drawer(array,globel_through){
 	for (var i=0;i<array.length;i++) {
@@ -176,208 +311,3 @@ function ispointinarraypath(x,y,array){
 	ctx.restore()
 	return is
 }
-
-
-
-//背景
-function background(color){
-	ctx.save()
-	ctx.fillStyle=color
-	ctx.fillRect(0,0,ww,wh)
-	ctx.restore()
-}
-//矩形
-class Rect{
-	constructor(aa){
-		let element={
-			groupId:'none',
-			position:{x:0,y:0},
-			size:{x:50,y:50},
-			deg:0,
-			visible:true,
-			color:{fill:'red',stroke:'black'},
-			fill:true,		
-			stroke:false,
-			strokewidth:10
-			
-
-				
-		}
-		this.group=[]
-
-		Object.assign(element,aa)
-		Object.assign(this,element)
-	}
-	draw(){
-		if(this.visible===false){
-			return
-		}
-		ctx.save()
-		ctx.beginPath()
-		ctx.translate(this.position.x,this.position.y)
-		ctx.rotate(this.deg)
-		
-		ctx.rect(-this.size.x/2,-this.size.y/2,this.size.x,this.size.y)
-		
-		if(this.stroke){
-			ctx.lineWidth=this.strokewidth
-			ctx.strokeStyle=this.color.stroke
-			ctx.stroke()
-		}
-		if(this.fill){
-			ctx.fillStyle=this.color.fill
-			ctx.fill()
-		}
-		ctx.restore()
-	}
-	updatepath(clearpath=true){
-		if(clearpath){
-			this.path=new Path2D()
-		}
-		ctx.save()
-		for(let i=this.group.length-1;i>=0;i--){
-			ctx.translate(this.group[i].position.x,this.group[i].position.y)
-			ctx.rotate(this.group[i].deg)
-			ctx.scale(this.group[i].scale.x,this.group[i].scale.y)
-		}
-		ctx.beginPath()
-		ctx.translate(this.position.x,this.position.y)
-		ctx.rotate(this.deg)
-
-		ctx.rect(-this.size.x/2,-this.size.y/2,this.size.x,this.size.y)		
-		ctx.restore()
-	}
-
-	ispointinpath(x,y){
-		if(this.visible===false){
-			return false
-		}
-		this.updatepath()
-		
-		return ctx.isPointInPath(x,y)
-	}
-
-}
-//圓形
-class Circle{
-	constructor(aa){
-		let element={
-			groupId:'none',
-			position:{x:0,y:0},
-			rr:25,
-			deg:0,
-			visible:true,
-			color:{fill:'red',stroke:'black'},
-			fill:true,		
-			stroke:false,
-			strokewidth:10,
-						
-		}
-		this.group=[]
-		Object.assign(element,aa)
-		Object.assign(this,element)
-	}
-	draw(){
-		if(this.visible===false){
-			return
-		}
-
-		ctx.save()
-		ctx.beginPath()
-		ctx.translate(this.position.x,this.position.y)
-		ctx.rotate(this.deg)
-		
-		ctx.arc(0,0,this.rr,0,Math.PI*2)
-		ctx.closePath()
-		if(this.stroke){
-			ctx.lineWidth=this.strokewidth
-			ctx.strokeStyle=this.color.stroke
-			ctx.stroke()
-		}
-		if(this.fill){
-			ctx.fillStyle=this.color.fill
-			ctx.fill()
-		}
-		ctx.restore()
-		
-	}
-	updatepath(clearpath=true){
-		if(clearpath){
-			this.path=new Path2D()
-		}
-		ctx.save()
-		for(let i=this.group.length-1;i>=0;i--){
-			ctx.translate(this.group[i].position.x,this.group[i].position.y)
-			ctx.rotate(this.group[i].deg)
-			ctx.scale(this.group[i].scale.x,this.group[i].scale.y)
-		}
-		ctx.translate(this.position.x,this.position.y)
-		ctx.rotate(this.deg)
-		ctx.beginPath()
-		ctx.arc(0,0,this.rr,0,Math.PI*2)
-		ctx.closePath()
-		ctx.restore()
-	}
-	ispointinpath(x,y){
-		if(this.visible===false){
-			return false
-		}
-		this.updatepath()
-		return ctx.isPointInPath(x,y)
-	}
-	
-
-
-}
-//群組
-class Group{
-	constructor(aa){
-		let all_members=[]
-		let element={
-			position:{x:0,y:0},
-			scale:{x:1,y:1},
-			deg:0,
-			visible:true,
-			members_count:0,
-			members:all_members
-			
-		}
-		Object.assign(element,aa)
-		Object.assign(this,element)
-	}
-	add(object_){
-		this.members.push(object_)
-		object_.group.push(this)
-		this.members_count+=1
-	}
-	draw(){
-		if(this.visible===false){
-			return
-		}
-		for(let i=0;i<this.members_count;i++){
-			ctx.save()
-			ctx.translate(this.position.x,this.position.y)
-			ctx.rotate(this.deg)
-			ctx.scale(this.scale.x,this.scale.y)
-			this.members[i].draw()
-			ctx.restore()
-			
-	
-		}
-	}
-	ispointinpath(x,y){
-		if(this.visible===false){
-			return false
-		}
-		for(let i=0;i<this.members_count;i++){
-			
-			if(this.members[i].ispointinpath(x,y)){
-				return true
-			}
-			
-		}
-		return false
-
-	}
-}
-

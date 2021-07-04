@@ -23,6 +23,59 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
 //example
 class example{
@@ -90,6 +143,11 @@ class example{
 			return ispointinarraypath(x,y,this.styles[this.style].array)
 		}
 		
+	}
+	addimg(src,middle,path){
+		let img=new Image()
+		img.src=src 
+		this.styles.push({method:'img',img:img,middle:middle,path:path})
 	}
 }
 */
